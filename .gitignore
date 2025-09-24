@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+build/
+dist/
+.env
+.venv/
+venv/
+ENV/
+env/
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+# Logs
+*.log
+# Local caches
+.mypy_cache/
+.pytest_cache/
+# App artifacts
+peers/
+*.conf
+*.png
+# Systemd temp
+*.service~

@@ -1,0 +1,19 @@
+[Unit]
+Description=WireGuard Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=wg-bot
+Group=wg-bot
+WorkingDirectory=/opt/wg-bot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/wg-bot/venv/bin/python -m app.main
+Restart=always
+RestartSec=3
+
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
