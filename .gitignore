@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.env
+configs/
+qrcodes/
+data/
+*.conf
+*.png
+.vscode/
+.idea/
+*.log

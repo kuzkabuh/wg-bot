@@ -1,0 +1,5 @@
+# Allow the dedicated user to run wg and wg-quick without password
+# Use visudo to edit this file.
+
+User_Alias WGBOT = wg-bot
+WGBOT ALL=(root) NOPASSWD: /usr/bin/wg, /usr/bin/wg-quick
