@@ -285,6 +285,7 @@ def build_client_conf(
     dns_source = (getattr(ctx.SET, "WG_DNS", "") or "").split(",")[0].strip()
     dns = dns_source or "1.1.1.1"
 
+    # MTU and keepalive are pulled directly from settings; defaults are defined in context
     mtu = int(getattr(ctx.SET, "WG_MTU", 1420) or 1420)
     keepalive = int(getattr(ctx.SET, "WG_KEEPALIVE", 21) or 21)
 

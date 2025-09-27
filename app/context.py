@@ -40,6 +40,8 @@ class Settings:
     WG_PRIVATE_SUBNET_V6: str
     WG_DNS: str
     WG_ALLOWED_IPS: str
+    WG_MTU: int
+    WG_KEEPALIVE: int
 
     DATA_DIR: str
     CONFIGS_DIR: str
@@ -51,6 +53,12 @@ class Settings:
 
     DELETE_MESSAGES: bool
     TZ: str
+
+    # Webhook and integration settings for WGDashboard
+    WGD_WEBHOOK_ENABLED: bool
+    WGD_WEBHOOK_HOST: str
+    WGD_WEBHOOK_PORT: int
+    WGD_WEBHOOK_SECRET: str
 
     DB_PATH: str = "./data/wgbot.sqlite3"
 
@@ -91,6 +99,8 @@ def init_context():
         WG_PRIVATE_SUBNET_V6=os.environ.get("WG_PRIVATE_SUBNET_V6", "fd86:ea04:1115::/64").strip(),
         WG_DNS=os.environ.get("WG_DNS", "1.1.1.1,1.0.0.1").strip(),
         WG_ALLOWED_IPS=os.environ.get("WG_ALLOWED_IPS", "0.0.0.0/0,::/0").strip(),
+        WG_MTU=int(os.environ.get("WG_MTU", "1420")),
+        WG_KEEPALIVE=int(os.environ.get("WG_KEEPALIVE", "21")),
 
         DATA_DIR=os.environ.get("DATA_DIR", "./data").strip(),
         CONFIGS_DIR=os.environ.get("CONFIGS_DIR", "./data/configs").strip(),
@@ -102,6 +112,12 @@ def init_context():
 
         DELETE_MESSAGES=os.environ.get("DELETE_MESSAGES", "false").lower() == "true",
         TZ=os.environ.get("TZ", "Europe/Moscow").strip(),
+
+        # Webhook settings (defaults disable the webhook)
+        WGD_WEBHOOK_ENABLED=os.environ.get("WGD_WEBHOOK_ENABLED", "false").lower() == "true",
+        WGD_WEBHOOK_HOST=os.environ.get("WGD_WEBHOOK_HOST", "0.0.0.0").strip(),
+        WGD_WEBHOOK_PORT=int(os.environ.get("WGD_WEBHOOK_PORT", "8787")),
+        WGD_WEBHOOK_SECRET=os.environ.get("WGD_WEBHOOK_SECRET", "").strip(),
 
         DB_PATH=os.environ.get("DB_PATH", "./data/wgbot.sqlite3").strip()
     )

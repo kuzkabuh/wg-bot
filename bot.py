@@ -113,8 +113,11 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher(storage=MemoryStorage())
-    register_user_handlers(dp)
+    # Register admin handlers before user handlers so that admin commands
+    # and buttons (e.g. the persistent «Админ-панель» button) are
+    # processed prior to the catch‑all handlers in the user router.
     register_admin_handlers(dp)
+    register_user_handlers(dp)
     allowed_updates = dp.resolve_used_update_types()
     logger.info("Starting bot... allowed_updates=%s", allowed_updates)
     # 6) start polling

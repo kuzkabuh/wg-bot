@@ -11,5 +11,3 @@ data/
 .vscode/
 .idea/
 *.log
-# build artifacts
-*.zip

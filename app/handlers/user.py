@@ -148,11 +148,14 @@ async def show_main(message: Message) -> None:
             "Нажмите «Регистрация», чтобы получить триал на 7 дней и 1 устройство."
         )
         await message.answer(text, reply_markup=new_user_menu())
-        # Send a secondary message with the persistent keyboard.  Some
-        # clients ignore ``reply_markup`` on the first message after
-        # ``CommandStart``, so we send a second message to be safe.
+        # Send a secondary message containing only a zero‑width space to attach
+        # the persistent keyboard.  Without this, some Telegram clients do
+        # not display the reply keyboard on the first message.  The
+        # zero‑width space character (\u200B) is invisible to the user,
+        # effectively hiding any service text.  We do not show the
+        # "Навигация всегда здесь" message to regular users.
         try:
-            await message.answer("Навигация всегда здесь👇", reply_markup=kb_reply)
+            await message.answer("\u200B", reply_markup=kb_reply)
         except Exception:
             # Ignore errors (e.g. user blocked the bot)
             pass
@@ -169,7 +172,8 @@ async def show_main(message: Message) -> None:
         reply_markup=user_menu(is_admin=is_admin)
     )
     try:
-        await message.answer("Навигация всегда здесь👇", reply_markup=kb_reply)
+        # Attach the persistent keyboard invisibly using a zero‑width space.
+        await message.answer("\u200B", reply_markup=kb_reply)
     except Exception:
         pass
 

@@ -12,6 +12,7 @@
 - Генерация клиентского `.conf` и QR‑кода.  Конфиг включает строку `PresharedKey`,
   если она была сгенерирована, и использует значение из `WG_ALLOWED_IPS` для
   поля `AllowedIPs`.
+  MTU и keepalive берутся из переменных окружения `WG_MTU` и `WG_KEEPALIVE`.
 - Статистика: когда был онлайн, байты TX/RX, статус handshake.
 - Админ‑панель: список пользователей, продление, смена лимитов, выдача безлимита, сброс/удаление peer'ов.
 
@@ -50,3 +51,28 @@
 - Чтение/запись `/etc/wireguard/wg0.conf`
 
 См. файл `install/sudoers.d.wg-bot`.
+
+## Интеграция с WireGuard Dashboard
+
+Если вы используете [WGDashboard](https://github.com/WGDashboard/WGDashboard), бот
+может автоматически отслеживать изменения, сделанные через веб‑интерфейс, и
+синхронизировать свою базу данных.  Настройка выглядит так:
+
+1. В `.env` установите `WGD_WEBHOOK_ENABLED=true`, укажите секрет в
+   `WGD_WEBHOOK_SECRET`, а также при необходимости измените `WGD_WEBHOOK_HOST`
+   (по умолчанию `0.0.0.0`) и `WGD_WEBHOOK_PORT` (по умолчанию `8787`).
+2. В WGDashboard зайдите в раздел Webhooks, создайте новый webhook и задайте
+   URL: `http://<ваш_бот>:<порт>/wgd?secret=<ваш_секрет>`.
+3. Выберите события для подписки (peer created/updated/deleted).  При
+   получении уведомления бот проверит секрет и вызовет синхронизацию.
+4. Кроме веб‑хука, админ может вручную вызвать `/resync` в Telegram, чтобы
+   привести базу в актуальное состояние.
+
+Пример `.env` для интеграции:
+
+```dotenv
+WGD_WEBHOOK_ENABLED=true
+WGD_WEBHOOK_SECRET=mysecret123
+WGD_WEBHOOK_HOST=0.0.0.0
+WGD_WEBHOOK_PORT=8787
+```
