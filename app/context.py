@@ -1,3 +1,13 @@
+"""Application context and settings loading.
+
+This module defines a `Settings` dataclass for all configuration options
+required by the bot and exposes two global variables:
+`SET` – an instance of `Settings` loaded from environment variables, and
+`DBH` – the database handler initialized in `init_context()`.
+
+Use `init_context()` early in your application to populate these globals.
+"""
+
 import os
 import logging
 from dataclasses import dataclass
@@ -5,10 +15,18 @@ from typing import List
 from dotenv import load_dotenv
 from db import DB
 
+# Logger for context operations
 logger = logging.getLogger("ctx")
 
 @dataclass
 class Settings:
+    """Container for all configuration values.
+
+    Attributes mirror `.env` variables.  Lists such as `ADMIN_IDS` are
+    parsed from comma‑separated strings.  Paths and numeric values are
+    coerced to appropriate types.  See `.env.example` for descriptions
+    of each option.
+    """
     BOT_TOKEN: str
     ADMIN_IDS: List[int]
 
@@ -36,15 +54,27 @@ class Settings:
 
     DB_PATH: str = "./data/wgbot.sqlite3"
 
+# Global settings and DB handler; populated in init_context()
 SET: Settings = None
 DBH: DB = None
 
 def _env_list_int(v: str) -> List[int]:
+    """Parse a comma‑separated string of integers into a list.
+
+    Empty or malformed parts are ignored.
+    """
     if not v:
         return []
     return [int(x.strip()) for x in v.split(",") if x.strip()]
 
 def init_context():
+    """Load environment variables and initialize global settings/DBH.
+
+    This function reads the `.env` file (if present), constructs a `Settings`
+    instance with proper types, verifies the presence of mandatory variables,
+    and instantiates the database handler without opening a connection.  It
+    should be called exactly once at the start of the application.
+    """
     load_dotenv()
     global SET, DBH
     SET = Settings(

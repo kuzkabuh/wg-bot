@@ -1,18 +1,39 @@
+"""SQLite database helper for the WireGuard bot.
+
+This module wraps SQLite access via ``aiosqlite`` providing a
+lightweight ORM‑like API for common operations: creating and updating
+users, managing peers, and logging events.  All methods are
+asynchronous and return rows in dictionary form.
+"""
+
 import aiosqlite
 import os
 import time
 from typing import Optional, List
 
-def ensure_dir(path: str):
+
+def ensure_dir(path: str) -> None:
+    """Create the directory for the database file if necessary."""
     if path:
         os.makedirs(path, exist_ok=True)
 
+
 class DB:
+    """Thin abstraction over an SQLite database using aiosqlite."""
+
     def __init__(self, path: str):
+        """Initialise the database helper.
+
+        Parameters
+        ----------
+        path: str
+            Path to the SQLite database file.
+        """
         ensure_dir(os.path.dirname(path))
         self.path = path
 
-    async def init(self):
+    async def init(self) -> None:
+        """Create tables and indices if they do not exist yet."""
         async with aiosqlite.connect(self.path) as con:
             await con.execute("PRAGMA journal_mode=WAL;")
             await con.execute("PRAGMA foreign_keys=ON;")
@@ -45,7 +66,7 @@ class DB:
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             """)
-            #-- Уникальные индексы на IP, чтобы не было дублей адресов
+            # Unique indices on IPs to prevent address duplication
             await con.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS uniq_peer_addr_v4
             ON peers(address_v4) WHERE address_v4 IS NOT NULL;
@@ -66,6 +87,7 @@ class DB:
             await con.commit()
 
     async def fetchone(self, q: str, args: tuple = ()) -> Optional[aiosqlite.Row]:
+        """Execute a query and return a single row or ``None``."""
         async with aiosqlite.connect(self.path) as con:
             con.row_factory = aiosqlite.Row
             cur = await con.execute(q, args)
@@ -74,6 +96,7 @@ class DB:
             return row
 
     async def fetchall(self, q: str, args: tuple = ()) -> List[aiosqlite.Row]:
+        """Execute a query and return all rows as a list."""
         async with aiosqlite.connect(self.path) as con:
             con.row_factory = aiosqlite.Row
             cur = await con.execute(q, args)
@@ -82,6 +105,7 @@ class DB:
             return rows
 
     async def execute(self, q: str, args: tuple = ()) -> int:
+        """Execute a write query and return the last inserted row ID."""
         async with aiosqlite.connect(self.path) as con:
             cur = await con.execute(q, args)
             await con.commit()
@@ -92,39 +116,57 @@ class DB:
     # ====== USERS ======
 
     async def get_or_create_user(self, tg_id: int, username: str, first_name: str, last_name: str):
+        """Fetch a user by Telegram ID or create a new one if it doesn't exist."""
         now = int(time.time())
         row = await self.fetchone("SELECT * FROM users WHERE tg_id=?", (tg_id,))
         if row:
-            await self.execute("""
+            await self.execute(
+                """
                 UPDATE users SET username=?, first_name=?, last_name=?, updated_at=?
                 WHERE tg_id=?
-            """, (username, first_name, last_name, now, tg_id))
+                """,
+                (username, first_name, last_name, now, tg_id)
+            )
             return row
-        uid = await self.execute("""
+        uid = await self.execute(
+            """
             INSERT INTO users (tg_id, username, first_name, last_name, plan, devices_limit, expires_at, created_at, updated_at)
             VALUES (?, ?, ?, ?, 'none', 1, NULL, ?, ?)
-        """, (tg_id, username, first_name, last_name, now, now))
+            """,
+            (tg_id, username, first_name, last_name, now, now)
+        )
         return await self.fetchone("SELECT * FROM users WHERE id=?", (uid,))
 
-    async def set_plan(self, tg_id: int, plan: str, devices_limit: int, expires_at: Optional[int]):
+    async def set_plan(self, tg_id: int, plan: str, devices_limit: int, expires_at: Optional[int]) -> None:
+        """Set the plan, device limit and expiry for a user."""
         now = int(time.time())
-        await self.execute("""
+        await self.execute(
+            """
             UPDATE users SET plan=?, devices_limit=?, expires_at=?, updated_at=? WHERE tg_id=?
-        """, (plan, devices_limit, expires_at, now, tg_id))
+            """,
+            (plan, devices_limit, expires_at, now, tg_id)
+        )
 
     async def get_user(self, tg_id: int):
+        """Retrieve a single user by Telegram ID."""
         return await self.fetchone("SELECT * FROM users WHERE tg_id=?", (tg_id,))
 
     async def list_users(self):
+        """Return all users ordered by ID descending."""
         return await self.fetchall("SELECT * FROM users ORDER BY id DESC")
 
-    async def set_devices_limit(self, tg_id: int, limit: int):
+    async def set_devices_limit(self, tg_id: int, limit: int) -> None:
+        """Update the device limit for a user without changing the plan."""
         now = int(time.time())
-        await self.execute("""
+        await self.execute(
+            """
             UPDATE users SET devices_limit=?, updated_at=? WHERE tg_id=?
-        """, (limit, now, tg_id))
+            """,
+            (limit, now, tg_id)
+        )
 
-    async def prolong(self, tg_id: int, extra_days: int):
+    async def prolong(self, tg_id: int, extra_days: int) -> None:
+        """Extend a user's expiry date by a given number of days."""
         now = int(time.time())
         u = await self.get_user(tg_id)
         if not u:
@@ -132,37 +174,49 @@ class DB:
         expires = u["expires_at"]
         base = expires if expires and expires > now else now
         new_expires = base + extra_days * 86400
-        await self.execute("""
+        await self.execute(
+            """
             UPDATE users SET expires_at=?, updated_at=? WHERE tg_id=?
-        """, (new_expires, now, tg_id))
+            """,
+            (new_expires, now, tg_id)
+        )
 
     # ====== PEERS ======
 
     async def create_peer(self, user_id: int, name: str, public_key: str, private_key: str,
                           address_v4: Optional[str], address_v6: Optional[str], preshared_key: Optional[str]):
+        """Create a new peer record and return the inserted row."""
         now = int(time.time())
-        pid = await self.execute("""
+        pid = await self.execute(
+            """
             INSERT INTO peers (user_id, name, public_key, private_key, address_v4, address_v6, preshared_key, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, name, public_key, private_key, address_v4, address_v6, preshared_key, now, now))
+            """,
+            (user_id, name, public_key, private_key, address_v4, address_v6, preshared_key, now, now)
+        )
         return await self.fetchone("SELECT * FROM peers WHERE id=?", (pid,))
 
     async def list_user_peers(self, user_id: int):
+        """Return all peers for a given user ID ordered by newest first."""
         return await self.fetchall("SELECT * FROM peers WHERE user_id=? ORDER BY id DESC", (user_id,))
 
     async def get_peer_by_pub(self, public_key: str):
+        """Retrieve a peer by its public key."""
         return await self.fetchone("SELECT * FROM peers WHERE public_key=?", (public_key,))
 
-    async def delete_peer(self, peer_id: int):
+    async def delete_peer(self, peer_id: int) -> None:
+        """Delete a peer by its ID."""
         await self.execute("DELETE FROM peers WHERE id=?", (peer_id,))
 
-    async def count_user_peers(self, user_id: int):
+    async def count_user_peers(self, user_id: int) -> int:
+        """Return the number of peers a user currently has."""
         row = await self.fetchone("SELECT COUNT(*) as c FROM peers WHERE user_id=?", (user_id,))
         return row["c"] if row else 0
 
     # ====== EVENTS ======
 
-    async def add_event(self, tg_id: Optional[int], level: str, message: str):
+    async def add_event(self, tg_id: Optional[int], level: str, message: str) -> None:
+        """Insert a log event for debugging or audit purposes."""
         now = int(time.time())
         await self.execute(
             "INSERT INTO events (ts, tg_id, level, message) VALUES (?, ?, ?, ?)",
@@ -170,5 +224,6 @@ class DB:
         )
 
     async def list_events(self, limit: int = 50):
-        # SQLite поддерживает LIMIT с параметром, это безопасно.
+        """Return the most recent events up to the given limit."""
+        # SQLite supports LIMIT with a parameter safely
         return await self.fetchall("SELECT * FROM events ORDER BY id DESC LIMIT ?", (limit,))

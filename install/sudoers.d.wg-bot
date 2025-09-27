@@ -1,5 +1,5 @@
-# Allow the dedicated user to run wg and wg-quick without password
-# Use visudo to edit this file.
+## Allow the dedicated wg-bot user to run WireGuard commands without a password.
+## This file should be edited via visudo.  See README for details.
 
 User_Alias WGBOT = wg-bot
 WGBOT ALL=(root) NOPASSWD: /usr/bin/wg, /usr/bin/wg-quick

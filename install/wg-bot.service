@@ -9,10 +9,7 @@ Environment="PYTHONUNBUFFERED=1"
 ExecStart=/opt/wg-bot/.venv/bin/python /opt/wg-bot/bot.py
 Restart=always
 RestartSec=5
-# User=root
-# Group=root
-
-# Если хотите запускать не от root, дайте sudoers и права на wg0.conf
+# User and group can be changed to run unprivileged
 User=wg-bot
 Group=wg-bot
 
